@@ -2,11 +2,13 @@
 name: verdict
 description: >
   Verdict — AI 驱动的诉讼攻防推演 Skill，通过模拟对方律师、法官和己方律师的完整博弈过程，
-  提前发现案件漏洞并提升胜诉概率。Use when user asks about 诉讼推演、案件分析、
-  证据质证、败诉风险评估、交叉询问、庭审模拟、胜诉概率、证据三性审查、补强方案、
-  劳动仲裁分析、合同纠纷、侵权诉讼、股权纠纷、诉讼攻防、红蓝对抗模拟。
-  Covers 6-phase adversarial litigation simulation: evidence mapping, red team attack,
-  blue team defense, judge verdict, reinforcement planning, and final risk assessment.
+  提前发现案件漏洞并提升胜诉概率。内嵌法律检索、合同条款提取、法律文书生成能力。
+  Use when user asks about 诉讼推演、案件分析、证据质证、败诉风险评估、交叉询问、庭审模拟、
+  胜诉概率、证据三性审查、补强方案、劳动仲裁分析、合同纠纷、合同审查、侵权诉讼、股权纠纷、
+  诉讼攻防、红蓝对抗模拟、法律检索、法律文书生成、起诉状、答辩状、代理词、质证意见。
+  Covers 6-phase adversarial litigation simulation: evidence mapping (with contract clause extraction),
+  red team attack (with legal research), blue team defense, judge verdict, reinforcement planning
+  (with legal document drafting), and final risk assessment.
 ---
 
 # Verdict — 诉讼攻防推演系统
@@ -37,6 +39,7 @@ description: >
 | 法律领域 | ✅ | 劳动争议/合同纠纷/侵权责任/股权纠纷等 |
 | 管辖地 | ❌ | 指定省/市，匹配地方裁判口径 |
 | 审理阶段 | ❌ | 仲裁/一审/二审/再审 |
+| 合同文本 | ❌ | 如涉及合同纠纷，提供合同/协议原文，系统将自动提取条款作为证据项 |
 
 ## 六阶段工作流
 
@@ -45,19 +48,22 @@ description: >
 ```
 阶段1 → 阶段2 → 阶段3 → 阶段4 → 阶段5 → 阶段6
 证据地图   红队攻击   蓝队反击   法官裁判   补强方案   终局评估
++合同提取  +法律检索                      +文书生成
 ```
 
 ### 阶段1：证据地图构建
 - 📍 加载文件: `agents/evidence-mapper.md`
 - 输入：用户提交的完整案件信息
-- 输出：结构化证据清单 + 证据关系分析 + 风险标记
+- 输出：结构化证据清单 + 证据关系分析 + 风险标记 + 合同条款提取（如输入包含合同）
+- **内嵌能力：合同条款提取** — 自动识别合同/协议文本，逐条提取分类为结构化证据项
 - **完成后暂停，确认证据地图无误再继续**
 
 ### 阶段2：红队律师攻击
 - 📍 加载文件: `agents/red-team-lawyer.md`
 - 📍 按需加载: `references/evidence-standards.md`, `references/cross-examination-guide.md`
 - 输入：阶段1的证据地图
-- 输出：逐项证据三性攻击 + 事实链漏洞 + 最强败诉路径 + 交叉询问问题（≥30个）
+- 输出：法律检索结果 + 逐项证据三性攻击 + 事实链漏洞 + 最强败诉路径 + 交叉询问问题（≥30个）
+- **内嵌能力：法律检索** — 攻击前检索法律/司法解释/指导案例/裁判规则，为每个攻击点提供法条支撑
 - **角色：被申请人团队首席律师，唯一目标是推翻申请人全部主张**
 - **完成后暂停，让用户 review 关键攻击点后再继续**
 
@@ -75,11 +81,12 @@ description: >
 - **角色：承办法官/仲裁员，不偏袒任何一方**
 - **完成后暂停，让用户确认裁判结果后再继续**
 
-### 阶段5：补强方案
+### 阶段5：补强方案与文书生成
 - 📍 加载文件: `agents/reinforcement-advisor.md`
 - 输入：阶段4裁判结果 + 全部前置分析
-- 输出：P0/P1/P2 三级证据补强方案
-- **角色：申请人律师，制定提高胜诉率的具体方案**
+- 输出：P0/P1/P2 三级证据补强方案 + 法律文书草稿（起诉状/答辩状/质证意见/代理词）
+- **内嵌能力：法律文书生成** — 根据审理阶段自动生成核心法律文书草稿，引用攻防分析中的证据和法条
+- **角色：申请人律师，制定提高胜诉率的具体方案并输出可直接提交法院的文书**
 
 ### 阶段6：终局风险评估
 - 📍 加载文件: `agents/risk-assessor.md`
