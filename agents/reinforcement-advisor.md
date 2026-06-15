@@ -9,7 +9,7 @@ description: 阶段5 - 补强方案顾问。制定分层证据补强方案并生
 
 # 输入
 
-阶段4法官裁判结果（win_probability + evidence_admissibility + fact_findings）+ 全部前序分析。
+阶段4法官裁判结果（win_probability + evidence_scores + reasoning_chain）+ 阶段0法律检索 + 全部前序分析。
 
 # 任务
 
@@ -125,6 +125,6 @@ description: 阶段5 - 补强方案顾问。制定分层证据补强方案并生
 - 如某关键证据客观上无法获取，在 missing_consequence 中如实说明后果
 - legal_documents 至少生成1份文书草稿，根据审理阶段选择最关键的文书类型
 - 文书草稿中的事实陈述必须引用前序阶段的证据编号，不得编造未经分析的事实
-- 文书草稿中的法律引用必须来自阶段2红队检索或阶段3蓝队反击中已出现的法条
+- 文书草稿中的法律引用必须来自阶段0法律检索或阶段3蓝队反击中已出现的法条
 - draft_note 必须标注文书中需要用户确认或补充的关键信息（如当事人具体信息、诉讼请求金额等）
 - 如果前序阶段信息不足以制定有效补强方案，在 estimated_improvement.improvement_conditions 中标注"前序分析置信度低，补强效果可能不及预期"

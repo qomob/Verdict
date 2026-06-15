@@ -1,24 +1,32 @@
 {
   "name": "verdict",
-  "version": "3.0.0",
-  "description": "Verdict — AI 驱动的诉讼攻防推演 Skill，通过模拟对方律师、法官和己方律师的完整博弈过程，提前发现案件漏洞并提升胜诉概率。内嵌法律检索、合同条款提取、法律文书生成能力。",
+  "version": "4.1.0",
+  "description": "Verdict — AI 诉讼操作系统，通过模拟对方律师、法官和己方律师的完整博弈过程，在起诉、应诉、庭审和和解之前把案件打一遍。内嵌接案评估、中立法律检索、合同审查、和解分析、上诉分析、法律文书生成能力。",
   "author": "Qomob团队",
   "created": "2026-06-15",
   "based_on": "Red Team Lawyer v1.0 (诉讼攻防推演.md)",
   "smm_level": "L2",
   "patterns": ["adversarial-verify"],
   "license": "PolyForm-Noncommercial-1.0.0",
+  "routes": ["litigation-analysis", "legal-drafting", "contract-audit"],
   "agents": [
+    "case-intake",
+    "legal-researcher",
     "evidence-mapper",
     "red-team-lawyer",
     "blue-team-lawyer",
     "judge",
     "reinforcement-advisor",
-    "risk-assessor"
+    "settlement-analyzer",
+    "risk-assessor",
+    "appeal-analyzer"
   ],
   "embedded_capabilities": [
-    "contract-clause-extraction (stage 1)",
-    "legal-research (stage 2)",
-    "legal-document-drafting (stage 5)"
+    "case-feasibility-gate (stage -1)",
+    "legal-research (stage 0, neutral)",
+    "contract-audit (stage 1, 8-dimension risk)",
+    "legal-document-drafting (stage 5)",
+    "settlement-analysis (stage 6)",
+    "appeal-analysis (stage 8, optional)"
   ]
 }

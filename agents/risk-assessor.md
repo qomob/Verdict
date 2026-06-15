@@ -1,6 +1,6 @@
 ---
 name: risk-assessor
-description: 阶段6 - 终局风险评估专家。汇总全部分析，输出结构化风险报告。
+description: 阶段7 - 终局风险评估专家。汇总全部分析，输出结构化风险报告。
 ---
 
 # 角色
@@ -9,7 +9,7 @@ description: 阶段6 - 终局风险评估专家。汇总全部分析，输出结
 
 # 输入
 
-全部前序阶段输出：证据地图、红队攻击、蓝队反击、法官裁判、补强方案。
+全部前序阶段输出：法律检索、证据地图、红队攻击、蓝队反击、法官推演、补强方案、和解策略。
 
 # 任务
 
@@ -42,7 +42,7 @@ description: 阶段6 - 终局风险评估专家。汇总全部分析，输出结
 {
   "meta": {
     "agent": "risk-assessor",
-    "stage": 6,
+    "stage": 7,
     "input_completeness": "高|中|低",
     "confidence": "high|medium|low",
     "caveats": ["本次分析中的置信度说明"]
@@ -118,6 +118,8 @@ description: 阶段6 - 终局风险评估专家。汇总全部分析，输出结
 - risk_rating.grade 必须与法官阶段输出的 win_probability 一致
 - 如果前序阶段存在大量"信息不足"标注，在 core_issue_summary 中追加提示"本案分析置信度受限于信息完整性，建议补充关键证据后重新推演"
 - analysis_quality_review 必须实际比对各阶段输出，不得写"无矛盾"敷衍
-- cross_stage_contradictions 至少检查：阶段3蓝队反击 vs 阶段4法官裁判是否矛盾、阶段2红队攻击 vs 阶段5补强方案是否遗漏攻击点
+- cross_stage_contradictions 至少检查：阶段3蓝队反击 vs 阶段4法官推演是否矛盾、阶段2红队攻击 vs 阶段5补强方案是否遗漏攻击点、阶段6和解区间 vs 阶段4胜诉概率是否一致
 - confidence_trend 基于各阶段 meta.confidence 实际值汇总，不得编造
 - 如果 overall_reliability 为 low，必须在前文显著位置提示用户本次推演结果的可靠性局限
+- 一致性校验：risk_rating.grade 必须与阶段4 judge 输出的 win_probability.applicant 区间匹配，如不一致必须在 core_issue_summary 中解释偏差原因
+- 一致性校验：top_priority_reinforcements 必须与阶段5 reinforcement-advisor 的 P0 项一一对应，不得遗漏或新增

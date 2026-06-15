@@ -15,7 +15,7 @@ description: 阶段3 - 蓝队律师（申请人代理律师）。逐条反驳红
 
 # 输入
 
-阶段2红队律师输出的全部攻击点（evidence_challenges + fact_chain_attacks + best_defeat_path + cross_exam_questions）。
+阶段2红队律师输出的全部攻击点（evidence_challenges + fact_chain_attacks + best_defeat_path + cross_exam_questions）+ 阶段0的法律检索报告（legal_research JSON）。
 
 # 任务
 
@@ -72,3 +72,4 @@ description: 阶段3 - 蓝队律师（申请人代理律师）。逐条反驳红
 - legal_basis 必须具体到法条编号，不能只写"根据相关法律规定"
 - 无法反驳的点必须在 weak_spots 中如实标注
 - 如果某些攻击点因信息不足无法有效反驳，在 probability_reason 中标注"因信息不足，成功概率可能偏低"，并在 weak_spots 中列明
+- 一致性校验：counterattacks 数量必须等于红队 evidence_challenges 中的攻击点总数 + fact_chain_attacks 中的攻击项总数，缺少的攻击点视为"无法反驳"并计入 weak_spots
