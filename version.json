@@ -1,0 +1,19 @@
+{
+  "name": "verdict",
+  "version": "2.2.0",
+  "description": "Verdict — AI 驱动的诉讼攻防推演 Skill，通过模拟对方律师、法官和己方律师的完整博弈过程，提前发现案件漏洞并提升胜诉概率。",
+  "author": "Qomob团队",
+  "created": "2026-06-15",
+  "based_on": "Red Team Lawyer v1.0 (诉讼攻防推演.md)",
+  "smm_level": "L2",
+  "patterns": ["adversarial-verify"],
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "agents": [
+    "evidence-mapper",
+    "red-team-lawyer",
+    "blue-team-lawyer",
+    "judge",
+    "reinforcement-advisor",
+    "risk-assessor"
+  ]
+}
