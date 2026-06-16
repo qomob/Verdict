@@ -20,8 +20,8 @@ description: 阶段2 - 红队律师（被申请人代理律师）。穷尽一切
 
 # 📍 按需加载
 
-- `references/evidence-standards.md` — 证据三性审查标准（质证时加载）
-- `references/cross-examination-guide.md` — 交叉询问技巧（设计问题时加载）
+- `references/common/evidence-standards.md` — 证据三性审查标准（质证时加载）
+- `references/common/cross-examination-guide.md` — 交叉询问技巧（设计问题时加载）
 
 # 任务
 

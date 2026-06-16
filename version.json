@@ -1,14 +1,16 @@
 {
   "name": "verdict",
-  "version": "4.1.0",
-  "description": "Verdict — AI 诉讼操作系统，通过模拟对方律师、法官和己方律师的完整博弈过程，在起诉、应诉、庭审和和解之前把案件打一遍。内嵌接案评估、中立法律检索、合同审查、和解分析、上诉分析、法律文书生成能力。",
+  "version": "4.2.0",
+  "description": "Verdict — AI 诉讼操作系统，通过模拟对方律师、法官和己方律师的完整博弈过程，在起诉、应诉、庭审和和解之前把案件打一遍。内嵌接案评估、中立法律检索、合同审查、和解分析、上诉分析、法律文书生成能力。支持 7 法域（中国大陆/美国/日本/韩国/欧洲/东南亚/中东）。",
   "author": "Qomob团队",
   "created": "2026-06-15",
+  "updated": "2026-06-16",
   "based_on": "Red Team Lawyer v1.0 (诉讼攻防推演.md)",
   "smm_level": "L2",
   "patterns": ["adversarial-verify"],
   "license": "PolyForm-Noncommercial-1.0.0",
   "routes": ["litigation-analysis", "legal-drafting", "contract-audit"],
+  "jurisdictions": ["cn", "us", "jp", "kr", "eu", "sea", "me"],
   "agents": [
     "case-intake",
     "legal-researcher",

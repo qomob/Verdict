@@ -3,11 +3,13 @@ name: verdict
 description: >
   Verdict — AI 诉讼操作系统，通过模拟对方律师、法官和己方律师的完整博弈过程，
   在起诉、应诉、庭审和和解之前把案件打一遍。内嵌接案评估、中立法律检索、合同审查、
-  和解分析、上诉分析、法律文书生成能力。
+  和解分析、上诉分析、法律文书生成能力。支持中国大陆、美国、日本、韩国、欧洲、东南亚、中东等法域。
   Use when user asks about 诉讼推演、案件分析、证据质证、败诉风险评估、交叉询问、庭审模拟、
   胜诉概率、证据三性审查、补强方案、劳动仲裁分析、合同纠纷、合同审查、侵权诉讼、股权纠纷、
   诉讼攻防、红蓝对抗模拟、法律检索、法律文书生成、起诉状、答辩状、代理词、质证意见、
-  和解谈判、调解策略、和解分析、接案评估、诉讼时效、上诉分析、二审翻盘。
+  和解谈判、调解策略、和解分析、接案评估、诉讼时效、上诉分析、二审翻盘、
+  美国法律、日本法律、韩国法律、欧洲法律、东南亚法律、中东法律、
+  US law、Japan law、Korea law、EU law、litigation、lawsuit。
 ---
 
 # Verdict — 诉讼攻防推演系统
@@ -49,17 +51,34 @@ description: >
 
 直接加载 `agents/evidence-mapper.md`，执行合同审查模式（条款风险分析），跳过诉讼推演。
 
+## 法域路由
+
+根据用户指定的国家/地区，按需加载对应法域的 reference 文件。**默认法域为中国大陆（cn）。**
+
+| 法域代码 | 法域 | 加载目录 | 用户触发关键词 |
+|---------|------|---------|--------------|
+| `cn` | 中国大陆 | `references/cn/` | 中国、大陆、境内（默认） |
+| `us` | 美国 | `references/us/` | 美国、联邦、US、USA |
+| `jp` | 日本 | `references/jp/` | 日本、Japan |
+| `kr` | 韩国 | `references/kr/` | 韩国、Korea |
+| `eu` | 欧洲 | `references/eu/` | 欧洲、欧盟、EU、Europe |
+| `sea` | 东南亚 | `references/sea/` | 东南亚、东盟、SEA、ASEAN |
+| `me` | 中东 | `references/me/` | 中东、海湾、Middle East |
+
+法域路由优先级高于案件类型路由。如果用户未指定法域，默认使用 `cn`（中国大陆）。
+所有 `references/{jurisdiction}/` 路径中的 `{jurisdiction}` 替换为当前法域代码。
+
 ## 案件类型路由
 
-根据用户提供的法律领域，按需加载对应 reference 文件，缩小上下文：
+根据用户提供的法律领域，按需加载对应法域的 reference 文件：
 
 | 法律领域 | 加载文件 |
 |---------|---------|
-| 劳动争议 | `references/case-labor.md` |
-| 合同纠纷 | `references/case-contract.md` |
-| 侵权责任 | `references/case-tort.md` |
-| 股权纠纷 | `references/case-equity.md` |
-| 知识产权 | `references/case-ip.md` |
+| 劳动争议 | `references/{jurisdiction}/case-labor.md` |
+| 合同纠纷 | `references/{jurisdiction}/case-contract.md` |
+| 侵权责任 | `references/{jurisdiction}/case-tort.md` |
+| 股权纠纷 | `references/{jurisdiction}/case-equity.md` |
+| 知识产权 | `references/{jurisdiction}/case-ip.md` |
 
 如果用户未指定法律领域，在阶段0完成后根据案件事实自动判断并加载。
 
@@ -74,7 +93,8 @@ description: >
 | 申请人证据 | ✅ | 证据编号、名称、证明目的、证据形式 |
 | 被申请人证据 | ❌ | 同上（如有） |
 | 法律领域 | ✅ | 劳动争议/合同纠纷/侵权责任/股权纠纷/知识产权等 |
-| 管辖地 | ❌ | 指定省/市，匹配地方裁判口径 |
+| 法域 | ❌ | 默认中国大陆（cn），可指定 us/jp/kr/eu/sea/me |
+| 管辖地 | ❌ | 指定省/市/州，匹配地方裁判口径 |
 | 审理阶段 | ❌ | 仲裁/一审/二审/再审 |
 | 合同文本 | ❌ | 如涉及合同纠纷，提供合同/协议原文，系统将进行合同审查 |
 
@@ -93,15 +113,16 @@ description: >
 
 ### 阶段-1：接案可行性评估
 - 📍 加载文件: `agents/case-intake.md`
-- 输入：案件背景、争议焦点、法律领域（最低限度信息）
+- 📍 按需加载: `references/{jurisdiction}/burden-of-proof.md`（时效规则）
+- 输入：案件背景、争议焦点、法律领域、法域（最低限度信息）
 - 输出：诉讼时效检查 + 管辖检查 + 案由匹配 + 起诉条件 + 案件强度初评
 - **门控逻辑：** 如果 recommendation.action 为 "do_not_proceed"，终止流程并向用户说明阻断性问题
 - **完成后自动进入阶段0（如通过门控）**
 
 ### 阶段0：法律研究
 - 📍 加载文件: `agents/legal-researcher.md`
-- 📍 按需加载: 案件类型对应的 `references/case-*.md`
-- 输入：案件背景、争议焦点、法律领域
+- 📍 按需加载: 当前法域 + 案件类型对应的 `references/{jurisdiction}/case-*.md`
+- 输入：案件背景、争议焦点、法律领域、法域
 - 输出：中立法律检索报告（法律→司法解释→指导案例→典型判例→裁判规则）
 - **角色：中立法律研究员，不偏向任何一方，为红蓝双方提供共享法律弹药库**
 - **完成后输出法律检索报告，自动进入阶段1**
@@ -115,7 +136,7 @@ description: >
 
 ### 阶段2：红队律师攻击
 - 📍 加载文件: `agents/red-team-lawyer.md`
-- 📍 按需加载: `references/evidence-standards.md`, `references/cross-examination-guide.md`
+- 📍 按需加载: `references/common/evidence-standards.md`, `references/common/cross-examination-guide.md`
 - 输入：阶段1的证据地图 + 阶段0的法律检索报告
 - 输出：逐项证据三性攻击 + 事实链漏洞 + 最强败诉路径 + 交叉询问问题（≥30个）
 - **角色：被申请人团队首席律师，唯一目标是推翻申请人全部主张**
@@ -130,7 +151,7 @@ description: >
 
 ### 阶段4：法官居中推演
 - 📍 加载文件: `agents/judge.md`
-- 📍 按需加载: `references/burden-of-proof.md`
+- 📍 按需加载: `references/{jurisdiction}/burden-of-proof.md`
 - 输入：阶段0法律检索 + 阶段2攻击 + 阶段3反击
 - 输出：双方评分 + 多维证据评分 + 事实认定推理链 + 胜诉概率
 - **角色：承办法官/仲裁员，不偏袒任何一方**
