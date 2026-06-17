@@ -250,6 +250,7 @@
 - `success_probability` 低于 50% 的回应 — 这些是你案件的薄弱环节
 - `weak_spots` — 蓝队自己也承认难以反驳的问题
 - `supplementary_evidence` — 建议补充的证据，记下来后面用
+- `missing_legal_basis` — 蓝队反击中发现的阶段0未覆盖的法律问题。如果非空，系统会建议你回到阶段0补充检索后重跑蓝队
 
 ---
 
@@ -552,6 +553,7 @@
 | 2 | `best_defeat_path.steps` | 红队的最强败诉路径 |
 | 3 | `counterattacks[].success_probability` | 蓝队反击成功概率 |
 | 3 | `overall_outlook.weak_spots` | 最难反驳的攻击点 |
+| 3 | `missing_legal_basis` | 阶段0未覆盖的法条缺口（非空时建议回阶段0补检索） |
 | 4 | `win_probability.applicant` | 当前胜诉概率 |
 | 4 | `evidence_scores[].overall_score` | 证据综合分（加权计算） |
 | 4 | `evidence_heatmap` | 证据热力图 |

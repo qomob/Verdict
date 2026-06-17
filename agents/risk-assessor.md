@@ -36,6 +36,16 @@ description: 阶段7 - 终局风险评估专家。汇总全部分析，输出结
 ## 7. 分析质量审查
 交叉检查前序各阶段输出的质量和一致性，揭示本次推演本身的局限。
 
+## 8. 法条引用审计
+回溯阶段0-6 中所有引用的法条/司法解释/案例，检查 verification 状态，标记未经校验或校验失败的引用。
+
+**审计来源：** 汇总 legal-researcher 的 `legal_research[].verification`、red-team 的 `legal_ammo_used`、blue-team 的 `legal_basis`、judge 的法条引用、reinforcement-advisor 的文书引用。
+
+**审计目标：**
+- 统计全部引用中 verified / unverified 的比例
+- 标记 unverified 条目出现在哪些阶段、哪些论证中
+- 如有 unverified 引用支撑了核心争议论点（红队高 severity 攻击 / 蓝队关键反驳 / 法官裁判依据），标注为"引用风险"
+
 # 输出格式
 
 ```json
@@ -96,6 +106,21 @@ description: 阶段7 - 终局风险评估专家。汇总全部分析，输出结
     "missed_evidence": ["在某个阶段被遗漏的关键证据编号"],
     "confidence_trend": "各阶段 meta.confidence 趋势：如从前半程 high 下降到后半程 medium，说明后半程分析因输入不足而置信度下降",
     "overall_reliability": "high|medium|low — 本次推演整体可靠性评估"
+  },
+  "citation_audit": {
+    "total_citations": 0,
+    "verified": 0,
+    "unverified": 0,
+    "verification_rate": "0%",
+    "mcp_tools_available": true,
+    "at_risk_citations": [
+      {
+        "citation": "法条/案例引用内容",
+        "stage": "出现的阶段编号",
+        "context": "该引用支撑的论点（如'红队高severity攻击'/'法官裁判依据'）",
+        "risk": "该引用未经验证，支撑的论点可能不可靠"
+      }
+    ]
   }
 }
 ```
@@ -123,3 +148,6 @@ description: 阶段7 - 终局风险评估专家。汇总全部分析，输出结
 - 如果 overall_reliability 为 low，必须在前文显著位置提示用户本次推演结果的可靠性局限
 - 一致性校验：risk_rating.grade 必须与阶段4 judge 输出的 win_probability.applicant 区间匹配，如不一致必须在 core_issue_summary 中解释偏差原因
 - 一致性校验：top_priority_reinforcements 必须与阶段5 reinforcement-advisor 的 P0 项一一对应，不得遗漏或新增
+- citation_audit.total_citations 必须等于各阶段引用的法条/案例去重后的总数
+- citation_audit.verification_rate 低于 60% 时，必须在 core_issue_summary 中追加提示"本次推演法条引用验证率偏低，关键论点的法律基础可能不可靠"
+- at_risk_citations 中标注的"引用风险"条目，如果其支撑的论点影响了 risk_rating.grade，必须在 core_issue_summary 中明确说明
