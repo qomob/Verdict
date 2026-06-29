@@ -1,0 +1,29 @@
+name: verdict-path-c-contract-audit
+version: "1.0"
+description: 路径C — 合同审查。跳过诉讼推演，仅执行合同 8 维风险审查。
+
+input:
+  type: object
+  required:
+    - contract_text
+  properties:
+    contract_text:
+      type: string
+      description: 合同/协议原文
+    jurisdiction:
+      type: string
+      enum: [cn, us, jp, kr, eu, sea, me]
+      default: cn
+
+steps:
+  - id: contract_audit
+    agent: evidence-mapper
+    description: 合同 8 维风险审查（条款风险分析）
+    input:
+      contract_text: "{{input.contract_text}}"
+      jurisdiction: "{{input.jurisdiction}}"
+      mode: contract_audit_only
+    output: contract_risk_report
+    checkpoint:
+      format: markdown
+      confirm: true

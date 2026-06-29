@@ -1,0 +1,40 @@
+name: verdict-path-b-quick-doc
+version: "1.0"
+description: 路径B — 快速文书生成。跳过攻防推演，直接生成法律文书草稿。
+
+input:
+  type: object
+  required:
+    - case_background
+    - document_type
+  properties:
+    case_background:
+      type: string
+      description: 案件背景信息
+    document_type:
+      type: string
+      enum: [complaint, defense_statement, agency_opinion, cross_examination_opinion]
+      description: 文书类型（起诉状/答辩状/代理词/质证意见）
+    jurisdiction:
+      type: string
+      enum: [cn, us, jp, kr, eu, sea, me]
+      default: cn
+    trial_stage:
+      type: string
+      enum: [arbitration, first_instance, second_instance, retrial]
+
+steps:
+  - id: generate_document
+    agent: reinforcement-advisor
+    description: 直接生成文书草稿
+    load_references:
+      - "references/{{input.jurisdiction}}/case-*.md"
+    input:
+      case_background: "{{input.case_background}}"
+      document_type: "{{input.document_type}}"
+      jurisdiction: "{{input.jurisdiction}}"
+      trial_stage: "{{input.trial_stage}}"
+    output: legal_document
+    checkpoint:
+      format: markdown
+      confirm: true

@@ -1,0 +1,244 @@
+name: verdict-path-a-full-trial
+version: "1.0"
+description: 路径A — 完整诉讼推演。10 阶段严格顺序，阶段-1 门控，法域×案件类型动态加载 reference。
+
+input:
+  type: object
+  required:
+    - case_background
+    - dispute_focus
+    - applicant_evidence
+    - legal_domain
+  properties:
+    case_background:
+      type: string
+      description: 当事人信息、事件时间线、争议产生过程、已发生的法律程序
+    dispute_focus:
+      type: string
+      description: 核心争议焦点，逐条列明
+    applicant_evidence:
+      type: array
+      description: 申请人证据（编号、名称、证明目的、证据形式）
+    respondent_evidence:
+      type: array
+      description: 被申请人证据（如有）
+    legal_domain:
+      type: string
+      enum: [labor, contract, tort, equity, ip]
+      description: 法律领域
+    jurisdiction:
+      type: string
+      enum: [cn, us, jp, kr, eu, sea, me]
+      default: cn
+      description: 法域（默认中国大陆）
+    venue:
+      type: string
+      description: 管辖地（指定省/市/州）
+    trial_stage:
+      type: string
+      enum: [arbitration, first_instance, second_instance, retrial]
+      description: 审理阶段
+    contract_text:
+      type: string
+      description: 合同/协议原文（如涉及合同纠纷）
+
+steps:
+  - id: case_intake
+    agent: case-intake
+    description: 阶段-1 接案可行性评估（门控步骤）
+    required_tools:
+      - mcp_Jina_AI.search_web
+      - mcp_Jina_AI.fact_check
+    fallback_if_tools_unavailable:
+      action: continue_with_unverified_tag
+      note: "时效规则未经 MCP 验证，标注 unverified"
+    load_when:
+      - "{{input.jurisdiction == 'cn'}}"
+    load_references:
+      - "references/{{input.jurisdiction}}/burden-of-proof.md"
+    input:
+      case_background: "{{input.case_background}}"
+      dispute_focus: "{{input.dispute_focus}}"
+      legal_domain: "{{input.legal_domain}}"
+      jurisdiction: "{{input.jurisdiction}}"
+    output: intake_assessment
+    gate:
+      condition: "{{case_intake.output.intake_assessment.recommendation.action == 'do_not_proceed'}}"
+      action: terminate
+      message: "案件存在阻断性问题（时效已过/管辖错误/案由错误），终止推演"
+    checkpoint:
+      format: markdown
+      confirm: true
+    scope:
+      do: [limitation_check, jurisdiction_check, cause_of_action_match, filing_conditions, strength_preview, neutralized_facts]
+      dont: [evidence_analysis, statute_research, attack_defense]
+
+  - id: legal_research
+    agent: legal-researcher
+    description: 阶段0 中立法律研究
+    required_tools:
+      - mcp_Jina_AI.search_web
+      - mcp_Jina_AI.read_webpage
+      - mcp_Jina_AI.fact_check
+    fallback_if_tools_unavailable:
+      action: continue_with_unverified_tag
+      note: "所有法律依据标注 unverified，存在幻觉风险"
+    load_references:
+      - "references/{{input.jurisdiction}}/case-{{input.legal_domain}}.md"
+    input:
+      neutralized_facts: "{{case_intake.output.intake_assessment.neutralized_facts}}"
+      case_background: "{{input.case_background}}"
+      dispute_focus: "{{input.dispute_focus}}"
+      legal_domain: "{{input.legal_domain}}"
+      jurisdiction: "{{input.jurisdiction}}"
+    output: legal_research_report
+    checkpoint:
+      format: markdown
+      confirm: true
+    scope:
+      do: [neutral_statute_research, jurisprudence_preselection_for_civil_law, mcp_verification]
+      dont: [evidence_evaluation, case_outcome_judgment, attack_defense_strategy]
+
+  - id: evidence_mapping
+    agent: evidence-mapper
+    description: 阶段1 证据地图构建（+合同审查如输入包含合同）
+    load_when:
+      - "{{input.contract_text != null && input.contract_text != ''}}"
+    input:
+      case_info: "{{input.case_background}}"
+      legal_research: "{{legal_research.output.legal_research_report}}"
+      contract_text: "{{input.contract_text}}"
+      applicant_evidence: "{{input.applicant_evidence}}"
+      respondent_evidence: "{{input.respondent_evidence}}"
+    output: evidence_map
+    checkpoint:
+      format: markdown
+      confirm: true
+    scope:
+      do: [evidence_structuring, evidence_relationship_analysis, contract_risk_audit]
+      dont: [legal_application_judgment, attack_design, cross_examination]
+
+  - id: red_team_attack
+    agent: red-team-lawyer
+    description: 阶段2 红队律师攻击
+    load_references:
+      - references/common/evidence-standards.md
+      - references/common/cross-examination-guide.md
+    input:
+      evidence_map: "{{evidence_mapping.output.evidence_map}}"
+      legal_research: "{{legal_research.output.legal_research_report}}"
+    output: red_team_attacks
+    checkpoint:
+      format: markdown
+      confirm: true
+    scope:
+      do: [evidence_three_property_attack, fact_chain_vulnerability, losing_path, cross_examination_design]
+      dont: [help_applicant, independent_legal_research]
+    hard_constraint:
+      proportionality: "论证篇幅与争议程度成正比，无争议一句带过，核心争议穷尽展开"
+
+  - id: blue_team_counter
+    agent: blue-team-lawyer
+    description: 阶段3 蓝队律师反击
+    input:
+      red_team_attacks: "{{red_team_attack.output.red_team_attacks}}"
+      legal_research: "{{legal_research.output.legal_research_report}}"
+    output: blue_team_counterattacks
+    checkpoint:
+      format: markdown
+      confirm: true
+    scope:
+      do: [point_by_point_refutation, legal_basis, reinforcement_evidence_suggestion]
+      dont: [add_new_attacks, independent_legal_research]
+    escalation:
+      condition: "{{blue_team_counter.output.blue_team_counterattacks.missing_legal_basis != empty}}"
+      message: "蓝队发现阶段0未覆盖的法律问题，建议回到 legal_research 补充检索"
+      max_iterations: 2
+      after_max_iterations: "忽略剩余 missing_legal_basis 条目，在 risk_assessment.analysis_quality_review.cross_stage_contradictions 中标注'missing_legal_basis 回环已到达上限'，所有未处理的条目按无法律依据处理"
+
+  - id: judge_deliberation
+    agent: judge
+    description: 阶段4 法官居中推演
+    load_references:
+      - "references/{{input.jurisdiction}}/burden-of-proof.md"
+    input:
+      legal_research: "{{legal_research.output.legal_research_report}}"
+      red_team_attacks: "{{red_team_attack.output.red_team_attacks}}"
+      blue_team_counterattacks: "{{blue_team_counter.output.blue_team_counterattacks}}"
+    output: judge_verdict
+    checkpoint:
+      format: markdown
+      confirm: true
+    scope:
+      do: [evidence_scoring, fact_finding_chain, win_probability]
+      dont: [strategy_formulation, document_generation]
+
+  - id: reinforcement
+    agent: reinforcement-advisor
+    description: 阶段5 补强方案 + 法律文书生成
+    input:
+      judge_verdict: "{{judge_deliberation.output.judge_verdict}}"
+      all_upstream: compact
+    output: reinforcement_and_documents
+    checkpoint:
+      format: markdown
+      confirm: true
+    scope:
+      do: [P0_P1_P2_reinforcement, legal_document_drafting]
+      dont: [re_attack, re_refute, re_score]
+
+  - id: settlement
+    agent: settlement-analyzer
+    description: 阶段6 和解策略分析
+    input:
+      judge_verdict: "{{judge_deliberation.output.judge_verdict}}"
+      reinforcement: "{{reinforcement.output.reinforcement_and_documents}}"
+      all_upstream: compact
+    output: settlement_strategy
+    checkpoint:
+      format: markdown
+      confirm: true
+    scope:
+      do: [settlement_range, bottom_line_prediction, negotiation_strategy]
+      dont: [re_deliberation, re_evaluate_evidence]
+
+  - id: risk_assessment
+    agent: risk-assessor
+    description: 阶段7 终局风险评估
+    input:
+      all_upstream_outputs: compact_all
+    output: final_risk_assessment
+    checkpoint:
+      format: markdown
+      confirm: true
+    scope:
+      do: [top10_vulnerabilities, top10_losing_arguments, top10_evidence_issues, overall_risk_rating, statute_citation_audit, quality_review]
+      dont: [new_analysis, new_strategy]
+
+  - id: appeal_analysis
+    agent: appeal-analyzer
+    description: 阶段8 上诉分析（可选）
+    load_when:
+      - "{{risk_assessment.output.final_risk_assessment.overall_risk_rating in ['D', 'E']}}"
+      - "{{user_request_contains_any(['上诉', '二审翻盘', '如果输了怎么办'])}}"
+    input:
+      judge_verdict: "{{judge_deliberation.output.judge_verdict}}"
+      reinforcement: "{{reinforcement.output.reinforcement_and_documents}}"
+      risk_assessment: "{{risk_assessment.output.final_risk_assessment}}"
+    output: appeal_strategy
+    checkpoint:
+      format: markdown
+      confirm: true
+    scope:
+      do: [reversible_error_identification, second_instance_reversal_probability, new_evidence_value, retrial_feasibility, appeal_strategy]
+      dont: [re_deliberation_first_instance, regenerate_documents]
+
+# ── 失败处理 ──
+on_failure:
+  stage_output_incomplete:
+    action: continue_with_degradation_note
+    note: "在 risk_assessment.analysis_quality_review.cross_stage_contradictions 中标注降级点"
+  case_intake_gate_overridden:
+    condition: "{{user_insists_proceed_despite_do_not_proceed}}"
+    action: allow_with_tag
+    tag: "接案评估未通过"
