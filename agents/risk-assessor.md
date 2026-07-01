@@ -46,6 +46,17 @@ description: 阶段7 - 终局风险评估专家。汇总全部分析，输出结
 - 标记 unverified 条目出现在哪些阶段、哪些论证中
 - 如有 unverified 引用支撑了核心争议论点（红队高 severity 攻击 / 蓝队关键反驳 / 法官裁判依据），标注为"引用风险"
 
+## 9. 判例时效审计（case_freshness_audit）
+
+按 SKILL.md「数据时效降级规则」对全部引用判例进行时效分级：
+
+**审计来源：** 汇总 legal-researcher 的 `legal_research[].cases[]`、red-team/blue-team/judge/reinforcement-advisor 引用的所有判例。
+
+**审计目标：**
+- 对每条判例标注时效分级：`≤24m`（正常）/ `24-60m`（降权 ×0.9）/ `>60m`（降权 ×0.7）/ `void`（已废止，硬红线）
+- 标注超 5 年且无新判例佐证的论点为 `at_risk_stale`
+- 若某核心论点（影响 risk_rating.grade）仅依赖 >60m 判例，必须在 `core_issue_summary` 中显式提示"该论点判例基础偏旧"
+
 # 输出格式
 
 ```json
@@ -121,6 +132,21 @@ description: 阶段7 - 终局风险评估专家。汇总全部分析，输出结
         "risk": "该引用未经验证，支撑的论点可能不可靠"
       }
     ]
+  },
+  "case_freshness_audit": {
+    "total_cases": 0,
+    "fresh_24m": 0,
+    "aging_24_60m": 0,
+    "stale_over_60m": 0,
+    "void_law": 0,
+    "at_risk_stale_points": [
+      {
+        "point": "依赖旧判例的论点描述",
+        "oldest_case_date": "YYYY-MM-DD",
+        "freshness_grade": "stale_over_60m",
+        "impact_on_grade": "该论点影响 risk_rating.grade，判例基础偏旧"
+      }
+    ]
   }
 }
 ```
@@ -143,7 +169,7 @@ description: 阶段7 - 终局风险评估专家。汇总全部分析，输出结
 - risk_rating.grade 必须与法官阶段输出的 win_probability 一致
 - 如果前序阶段存在大量"信息不足"标注，在 core_issue_summary 中追加提示"本案分析置信度受限于信息完整性，建议补充关键证据后重新推演"
 - analysis_quality_review 必须实际比对各阶段输出，不得写"无矛盾"敷衍
-- cross_stage_contradictions 至少检查：阶段3蓝队反击 vs 阶段4法官推演是否矛盾、阶段2红队攻击 vs 阶段5补强方案是否遗漏攻击点、阶段6和解区间 vs 阶段4胜诉概率是否一致
+- cross_stage_contradictions 至少检查：阶段3蓝队反击 vs 阶段4法官推演是否矛盾、阶段2红队攻击 vs 阶段5补强方案是否遗漏攻击点、阶段6和解区间 vs 阶段4胜诉概率是否一致、阶段3蓝队 controversy_disputes 中挑战的条目是否在阶段4法官推演中得到体现
 - confidence_trend 基于各阶段 meta.confidence 实际值汇总，不得编造
 - 如果 overall_reliability 为 low，必须在前文显著位置提示用户本次推演结果的可靠性局限
 - 一致性校验：risk_rating.grade 必须与阶段4 judge 输出的 win_probability.applicant 区间匹配，如不一致必须在 core_issue_summary 中解释偏差原因
@@ -151,3 +177,6 @@ description: 阶段7 - 终局风险评估专家。汇总全部分析，输出结
 - citation_audit.total_citations 必须等于各阶段引用的法条/案例去重后的总数
 - citation_audit.verification_rate 低于 60% 时，必须在 core_issue_summary 中追加提示"本次推演法条引用验证率偏低，关键论点的法律基础可能不可靠"
 - at_risk_citations 中标注的"引用风险"条目，如果其支撑的论点影响了 risk_rating.grade，必须在 core_issue_summary 中明确说明
+- case_freshness_audit.total_cases 必须等于 citation_audit 中所有判例（非法条）的总数
+- case_freshness_audit.void_law > 0 时，必须在 core_issue_summary 中显式提示"存在已废止法条引用，相关论点不可作为裁判依据"
+- case_freshness_audit.at_risk_stale_points 中任何一条 impact_on_grade 涉及 risk_rating.grade 时，必须在 core_issue_summary 中追加"该论点判例基础偏旧（最旧 YYYY-MM），建议补充近期判例佐证"

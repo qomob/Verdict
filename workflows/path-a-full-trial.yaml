@@ -173,6 +173,30 @@ steps:
       do: [evidence_scoring, fact_finding_chain, win_probability]
       dont: [strategy_formulation, document_generation]
 
+  # ── 策略决策检查点（P1-3: 显式 gate）──
+  - id: strategy_checkpoint
+    agent: judge
+    description: 策略决策检查点 — 检验法官推演是否触发策略走向变更，强制执行 SKILL.md 诉讼策略决策契约
+    input:
+      judge_verdict: "{{judge_deliberation.output.judge_verdict}}"
+      user_confirmed_stance: "{{case_intake.output.intake_assessment.recommendation}}"
+    output: strategy_decision
+    gate:
+      conditions:
+        - when: "{{judge_verdict.win_probability.applicant < 30 && user_confirmed_stance.action == 'proceed'}}"
+          action: require_user_confirmation
+          message: "⚠️ 法官推演显示胜诉概率仅 {{judge_verdict.win_probability.applicant}}%，远低于接案评估预期。是否调整策略走向（如转向和解、降低诉请、变更请求权基础）？"
+          block_until: user_responds
+        - when: "{{judge_verdict.reasoning_chain | any_step_with_unmatched_legal_basis}}"
+          action: warn_and_continue
+          message: "⚠️ 法官推演中部分法条引用未通过来源校验，裁判结论可靠性可能受影响。补强方案将基于此推演生成，请注意风险。"
+    checkpoint:
+      format: markdown
+      confirm: true
+    scope:
+      do: [validate_strategy_consistency, check_stance_contradiction, surface_strategy_blocker]
+      dont: [re_deliberation, re_score_evidence, generate_documents]
+
   - id: reinforcement
     agent: reinforcement-advisor
     description: 阶段5 补强方案 + 法律文书生成
@@ -232,6 +256,86 @@ steps:
     scope:
       do: [reversible_error_identification, second_instance_reversal_probability, new_evidence_value, retrial_feasibility, appeal_strategy]
       dont: [re_deliberation_first_instance, regenerate_documents]
+
+# ── compact 策略定义（P2-1）──
+# 下游阶段的 all_upstream: compact / compact_all 按以下规则压缩上游数据
+compact_strategy:
+  # 每个阶段必须完整传递给下游的字段（不可压缩）
+  preserve_fields:
+    meta: ["agent", "stage", "input_completeness", "confidence", "caveats"]
+    stage_-1:
+      - "recommendation.action"
+      - "case_strength.grade"
+      - "neutralized_facts.dispute_focus_neutral"
+    stage_0:
+      - "legal_research[].id"
+      - "legal_research[].citation"
+      - "legal_research[].favors"
+      - "legal_research[].verification.status"
+      - "research_summary.applicant_favorable"
+      - "research_summary.respondent_favorable"
+      - "verification_log"
+      - "meta.mcp_verification"
+    stage_1:
+      - "evidence_list[].id"
+      - "evidence_list[].name"
+      - "evidence_list[].purpose"
+      - "relationships[].status"
+      - "gaps"
+      - "contract_audit.top_risks"
+    stage_2:
+      - "evidence_challenges[].evidence_id"
+      - "evidence_challenges[].strategy"
+      - "evidence_challenges[].controversy_level"
+      - "evidence_challenges[].challenges[].severity"
+      - "fact_chain_attacks"
+      - "best_defeat_path"
+      - "cross_exam_questions[].lethality"
+      - "legal_ammo_used"
+    stage_3:
+      - "counterattacks[].attack_ref"
+      - "counterattacks[].success_probability"
+      - "counterattacks[].response_level"
+      - "overall_outlook"
+      - "missing_legal_basis"
+    stage_4:
+      - "win_probability"
+      - "evidence_scores[].evidence_id"
+      - "evidence_scores[].overall_score"
+      - "evidence_scores[].admitted"
+      - "reasoning_chain"
+      - "judge_notes"
+      - "citation_validation"
+      - "scoring_config"
+    stage_5:
+      - "p0_critical"
+      - "p1_important"
+      - "estimated_improvement.projected_win_probability"
+      - "legal_documents[].doc_type"
+    stage_6:
+      - "settlement_zone"
+      - "party_leverage"
+      - "negotiation_strategy.walk_away_point"
+
+  # 可压缩（摘要化）的字段
+  compact_fields:
+    stage_2:
+      cross_exam_questions: "仅保留 lethality >= 4 的问题，其余摘要为'另有 N 个低杀伤力问题'"
+      evidence_challenges_challenges_detail: "strategy 为 no_challenge 的条目仅保留一句话原因"
+    stage_3:
+      counterattacks_response: "response_level 为 brief_confirmation 的条目仅保留一句话"
+    stage_5:
+      legal_documents_facts_and_reasons: "保留结构和证据编号引用，正文可摘要"
+    stage_6:
+      negotiation_strategy_concession_path: "保留策略方向，可摘要具体步骤"
+
+  # 禁止丢弃的字段（即使上下文极度紧张）
+  never_drop:
+    - "所有阶段的 meta 对象"
+    - "stage_0 的 verification_log 和 mcp_verification"
+    - "stage_4 的 win_probability 和 reasoning_chain"
+    - "stage_4 的 citation_validation"
+    - "所有 LR 编号引用链"
 
 # ── 失败处理 ──
 on_failure:

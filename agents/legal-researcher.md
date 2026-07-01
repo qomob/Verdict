@@ -68,7 +68,12 @@ description: 阶段0 - 中立法律研究员。在攻防开始前进行法律检
 - **按需读取：** 仅对拟引用的搜索结果调用 read_webpage，不要无差别抓取
 - **强制核查：** 最终输出的每条 `legal_research` 条目都必须经过 fact_check
 - **去重校验：** 同一条文（相同法律名称+条文编号）只校验一次，后续引用复用校验记录。在校验前先查 verification_log 中是否已有该条文的记录
-- **降级处理：** 如果 MCP 工具不可用（网络错误、服务超时），在 `meta.caveats` 中标注"MCP 工具不可用，本次检索未经外部验证，引用可能存在误差"，所有条目 `verification.status` 标为 "unverified"
+- **降级处理：** 如果 MCP 工具不可用（网络错误、服务超时），执行以下降级流程：
+  1. 在输出最顶部显示醒目警告：`🚫 MCP 法律检索工具不可用 — 本次所有法条引用均未经验证，存在幻觉风险。关键论点的法律基础可能不可靠，强烈建议稍后在 MCP 可用时重新执行阶段0。`
+  2. 所有条目 `verification.status` 标为 "unverified"
+  3. `meta.confidence` 强制降级为 "low"
+  4. `meta.mcp_verification.tools_available` 必须为 false
+  5. 在输出摘要中追加"MCP 不可用 — 法条引用全部未验证"的显著提示
 
 ## 校验日志（verification_log）
 
@@ -216,6 +221,11 @@ description: 阶段0 - 中立法律研究员。在攻防开始前进行法律检
         "method": "fact_check|search_web|read_webpage",
         "source_url": "验证来源 URL（如有）",
         "checked_at": "验证时间"
+      },
+      "case_freshness": {
+        "decision_date": "裁判/发布日期（YYYY-MM-DD，法律/司法解释为发布日期；指导案例/典型判例为裁判日期；如无法确定则填 null 并在 note 说明）",
+        "freshness_grade": "fresh_24m | aging_24_60m | stale_over_60m | void",
+        "freshness_note": "时效说明（如：判例已超 5 年，仅作历史趋势参考；或：法规已废止，已从证据清单剔除）"
       }
     }
   ],
@@ -248,7 +258,7 @@ description: 阶段0 - 中立法律研究员。在攻防开始前进行法律检
 - meta.mcp_verification 中的统计数据必须与 legal_research 中各条目的 verification.status 一致
 - 如果法律领域无法确定（用户未提供且无法从案情推断），在 meta.caveats 中标注"法律领域未确定，检索范围可能不完整"
 - 如果管辖地未提供，跳过裁判规则层检索，在 meta.caveats 中标注"未提供管辖地，裁判规则层未检索"
-- 如果 MCP 工具不可用，meta.mcp_verification.tools_available 必须为 false，所有条目标为 unverified
+- 如果 MCP 工具不可用，meta.mcp_verification.tools_available 必须为 false，所有条目标为 unverified，且 meta.confidence 必须为 low，输出顶部必须包含醒目的 MCP 不可用警告
 - legal_questions 至少拆解出 2 个法律问题
 - 大陆法系法域（cn/jp/kr/eu）必须输出 claim_basis_prescreen，applicable 为 true；其他法域 applicable 为 false 且 legal_relationship_pairs/candidate_bases 为空数组
 - claim_basis_prescreen.candidate_bases 至少包含 2 个候选请求权基础，覆盖主要规范和防御规范两种类型
@@ -256,3 +266,12 @@ description: 阶段0 - 中立法律研究员。在攻防开始前进行法律检
 - verification_log 中每个唯一条文只出现一次，同一条文的多次引用通过 reused_by 字段关联
 - verification_log 中的 log_id 与 legal_research 中的 verification 字段一一对应（verification 中记录 method/source_url，log 中记录完整的校验记录并关联所有引用该条目的 LR 编号）
 - meta.mcp_verification 的统计数据基于 verification_log 计算，不得与 log 中的记录矛盾
+- 每条 legal_research 必须包含 case_freshness 字段，标注该法规/判例的时效分级，供阶段7 risk-assessor 的 case_freshness_audit 汇总：
+  - `fresh_24m`：发布/裁判日期 ≤ 24 个月，正常引用
+  - `aging_24_60m`：24-60 个月，标注 `⚠️ 判例偏旧`，需有近 24 个月信号交叉印证
+  - `stale_over_60m`：> 60 个月，仅作历史趋势参考，不得作为"当前裁判倾向"依据
+  - `void`：已废止/已修订/已退役，从证据清单剔除，不得进入红蓝攻防
+- 法律和司法解释层（第1-2层）的 case_freshness.freshness_grade 通常为 fresh_24m（长期有效）；但如发现已废止（如《合同法》已被《民法典》吸收）须标 void，并在 note 中说明替代法条
+- 指导案例和典型判例层（第3-4层）的 case_freshness.decision_date 必须为裁判文书落款日期，不得为空；如无法从裁判文书确认日期，标注 `unverified` 并在 note 中说明
+- source_level 为"裁判规则"时，decision_date 为该裁判指引/会议纪要的发布日期
+- case_freshness.freshness_grade 为 void 的条目仍保留在 legal_research 中（供 risk-assessor 审计追溯），但在 note 中明确标注"已废止，不作为攻防依据"

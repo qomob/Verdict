@@ -28,6 +28,43 @@ description: 阶段3 - 蓝队律师（申请人代理律师）。逐条反驳红
 
 # 任务
 
+## 任务0：红队争议标注校验（交叉验证阀门）
+
+红队自行判定争议程度（controversy_level）存在利益冲突——红队可能将关键要件误标为"无争议"以规避深入攻击，从而掩盖案件弱点。蓝队作为申请人律师，有责任校验红队的争议标注是否合理。
+
+**校验规则：**
+
+对红队标注为 `controversy_level: "无争议"` 或 `strategy: "no_challenge"` 的每个条目：
+
+1. **审查：** 蓝队快速审查该要件是否确实无争议
+2. **判断：**
+   - ✅ **认可** — 蓝队同意无争议判断，按 brief_confirmation 一句话回应
+   - ⚠️ **挑战** — 蓝队认为该要件实际存在争议，红队标注不当
+3. **挑战时的处理：**
+   - 在 `controversy_disputes` 中记录挑战
+   - 对该条目执行 full_refutation（即使红队没有展开攻击，蓝队主动分析该要件的潜在风险）
+   - 在 `meta.caveats` 中标注"蓝队对红队的 N 项争议标注提出挑战"
+
+**校验输出：**
+
+```json
+{
+  "controversy_disputes": [
+    {
+      "red_team_ref": "申E2-controversy_level标注",
+      "red_team_judgment": "无争议",
+      "blue_team_judgment": "核心争议",
+      "reason": "蓝队认为该要件实际存在争议的理由（如：该证据虽真实性无异议，但关联性存在重大争议，红队仅因真实性无争议就标注无争议，遗漏了关联性维度的攻击空间）",
+      "action_taken": "full_refutation_executed"
+    }
+  ]
+}
+```
+
+如果蓝队认可红队的全部争议标注，`controversy_disputes` 为空数组，在 meta.caveats 中标注"蓝队认可红队的全部争议标注"。
+
+## 任务1：逐条反驳
+
 对红队的每一个攻击点，逐条回应：
 
 1. **复述攻击点** — 准确概括红队的具体攻击内容
@@ -79,6 +116,15 @@ description: 阶段3 - 蓝队律师（申请人代理律师）。逐条反驳红
       "needed_law": "反击此攻击点需要的法条方向（如：关于电子数据原件认定的规则）",
       "reason": "阶段0检索结果中未覆盖此法律问题"
     }
+  ],
+  "controversy_disputes": [
+    {
+      "red_team_ref": "申E2-controversy_level标注",
+      "red_team_judgment": "无争议",
+      "blue_team_judgment": "核心争议",
+      "reason": "蓝队认为该要件实际存在争议的理由",
+      "action_taken": "full_refutation_executed"
+    }
   ]
 }
 ```
@@ -95,3 +141,5 @@ description: 阶段3 - 蓝队律师（申请人代理律师）。逐条反驳红
 - 无法反驳的点必须在 weak_spots 中如实标注
 - 如果某些攻击点因信息不足无法有效反驳，在 probability_reason 中标注"因信息不足，成功概率可能偏低"，并在 weak_spots 中列明
 - 一致性校验：counterattacks 数量必须等于红队 evidence_challenges 中的条目总数 + fact_chain_attacks 中的攻击项总数，缺少的攻击点视为"无法反驳"并计入 weak_spots
+- **controversy_disputes 交叉校验：** 对红队标注为"无争议"或"no_challenge"的每个条目，蓝队必须审查并决定认可或挑战。认可时 controversy_disputes 无对应条目；挑战时必须记录并执行 full_refutation
+- controversy_disputes 中的 red_team_ref 必须引用红队 evidence_challenges 中的具体条目，不得泛泛而谈

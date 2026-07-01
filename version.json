@@ -1,10 +1,10 @@
 {
   "name": "verdict",
-  "version": "4.4.0",
+  "version": "4.5.0",
   "description": "Verdict — AI 诉讼操作系统，通过模拟对方律师、法官和己方律师的完整博弈过程，在起诉、应诉、庭审和和解之前把案件打一遍。内嵌接案评估（事实中性化阀门）、中立法律检索（MCP 增强 + 请求权基础预选）、比例原则攻防、合同审查、法条引用审计、和解分析、上诉分析、法律文书生成能力。支持 7 法域（中国大陆/美国/日本/韩国/欧洲/东南亚/中东）。",
   "author": "Qomob团队",
   "created": "2026-06-15",
-  "updated": "2026-06-17",
+  "updated": "2026-07-02",
   "based_on": "Red Team Lawyer v1.0 (诉讼攻防推演.md)",
   "smm_level": "L2",
   "patterns": ["adversarial-verify"],
@@ -32,12 +32,15 @@
   ],
   "embedded_capabilities": [
     "case-feasibility-gate (stage -1, MCP-verified limitation, fact-neutralization valve)",
-    "legal-research (stage 0, neutral, MCP-verified citations, claim-basis-prescreen for civil-law jurisdictions)",
-    "proportionality-principle (stages 2-3, controversy-graded attack/defense)",
+    "legal-research (stage 0, neutral, MCP-verified citations, claim-basis-prescreen for civil-law jurisdictions, aggressive-mcp-degradation)",
+    "proportionality-principle (stages 2-3, controversy-graded attack/defense, blue-team-cross-validation)",
     "contract-audit (stage 1, 8-dimension risk)",
-    "legal-document-drafting (stage 5)",
-    "settlement-analysis (stage 6)",
+    "case-type-aware-evidence-scoring (stage 4, dynamic weights by legal_domain, admissibility-as-post-filter)",
+    "strategy-decision-gate (between stage 4-5, enforce strategy decision contract)",
+    "legal-document-drafting (stage 5, mandatory-disclaimer, path-B-lightweight-verification)",
+    "settlement-analysis (stage 6, range-estimate-not-precise-values)",
     "citation-audit (stage 7, cross-stage verification traceability)",
-    "appeal-analysis (stage 8, optional)"
+    "appeal-analysis (stage 8, optional)",
+    "compact-strategy (explicit field-preservation rules for downstream context compression)"
   ]
 }

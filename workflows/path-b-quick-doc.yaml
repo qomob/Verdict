@@ -24,9 +24,26 @@ input:
       enum: [arbitration, first_instance, second_instance, retrial]
 
 steps:
+  - id: verify_statutes
+    agent: reinforcement-advisor
+    description: 轻量法条验证 — 对文书中将引用的法条执行 MCP fact_check，防止路径B完全跳过法律验证
+    required_tools:
+      - mcp_Jina_AI.fact_check
+    fallback_if_tools_unavailable:
+      action: continue_with_unverified_tag
+      note: "MCP 不可用，文书中的法条引用全部标注 unverified，在 disclaimer 中强化提示"
+    input:
+      case_background: "{{input.case_background}}"
+      jurisdiction: "{{input.jurisdiction}}"
+      document_type: "{{input.document_type}}"
+    output: verified_statutes
+    scope:
+      do: [extract_statute_references_from_case, fact_check_each_statute]
+      dont: [full_legal_research, evidence_analysis, attack_defense]
+
   - id: generate_document
     agent: reinforcement-advisor
-    description: 直接生成文书草稿
+    description: 基于验证后的法条生成文书草稿
     load_references:
       - "references/{{input.jurisdiction}}/case-*.md"
     input:
@@ -34,6 +51,7 @@ steps:
       document_type: "{{input.document_type}}"
       jurisdiction: "{{input.jurisdiction}}"
       trial_stage: "{{input.trial_stage}}"
+      verified_statutes: "{{verify_statutes.output.verified_statutes}}"
     output: legal_document
     checkpoint:
       format: markdown
